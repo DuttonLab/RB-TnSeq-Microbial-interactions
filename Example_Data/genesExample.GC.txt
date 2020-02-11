@@ -1,0 +1,4 @@
+locusId	sysName	type	scaffoldId	begin	end	strand	name	desc	GC	nTA
+14146	b0001	1	7023	190	255	+	thrL	thr operon leader peptide (NCBI)	0.5152	4
+14147	b0002	1	7023	337	2799	+	thrA	bifunctional aspartokinase I/homeserine dehydrogenase I (NCBI)	0.5307	67
+14148	b0003	1	7023	2801	3733	+	thrB	homoserine kinase (NCBI)	0.5627	22
