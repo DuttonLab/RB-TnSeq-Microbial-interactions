@@ -76,33 +76,39 @@ This function performs a normalization based on the insertion location (as genes
 
   ### Part II: Averaging gene fitness values across replicates
 
-Associated script: Averaging_Replicates.R
+Associated script: Script2_Averaging_Replicates.R
 
 This script allows you to investigate correlation between your biological replicates and to average the normalized genes fitness values across the replicates.
 
-Averaged genes fitness values are calculated as the weighted average of replicate gene fitness. Then, for each condition, average gene fitness values are corrected by the mean of the replicate mean. Finally, each gene fitness distribution is centered around the mode.  
+Averaged genes fitness values are calculated as the weighted average of replicate gene fitness. 
 
 
 #### Inputs: 
+•	*If you have the same T0 for all your conditions*:
 
-  * the **.RData generated for each replicate in Script I**. It should be 3 different .RData files
+  *  **the .RData generated for each replicate in Script I** --> it should be 3 different .RData files
+  
+•	*If you have used different T0s for your conditions*:
+You first need to run the .RData files generated in Script 1 for each replicates and sets of T0 in Multiple_T0s.R
+
+  * **the .RData generated in Multiple_T0s.R**
+
 
 #### Parameters: 
 
 In this script you have to specify 1 parameter:
 
 * **Org_locId**: “Num” if the locusId of the genes in your gene.GC file are numerics, “Char” if they are character.
+* **multiT**: “TRUE” if you had different T0s for different conditions of the same replicate and had to use Multiple_T0s.R; “FALSE” if you had the same T0s for all the conditions in the replicate and directly load the .RData from Script1
 
 #### Outputs:
 
 An RData object containing (along with all the plots): 
 1. *Final_gene_Fitness*: table containing the final averaged and normalized gene fitness values for all the genes in each condition
-2. *Mean_corrected_averageF*: table containing the average gene fitness corrected by the mean of the replicate mean (not centered around the mode)
-3. *Average_fitness*: table containing the weighted average gene fitness across replicates (not corrected by mean nor centered around mode)
-4. *Correlation_table_fit*: table containing for each condition the Pearson correlation coefficient for all pairwise comparisons of replicates
+2. *Average_fitness*: table containing the inverse-variance weighted average gene fitness across replicates and associated standard deviation
+3. *Correlation_table_fit*: table containing for each condition the Pearson correlation coefficient for all pairwise comparisons of replicates as well as the Spearman and Lin's coefficient
 5. *AllReplicate*: single table containing the normalized gene fitness values for each replicate
-6. *mean1*, *mean2* and *mean3*: the means of gene fitness in Replicates 1,2 and 3
-7. *genes.tab*: gene.GC file
+6. *genes.tab*: gene.GC file
 
 #### Functions:
 
@@ -110,7 +116,7 @@ An RData object containing (along with all the plots):
 This function calculates the Pearson, Spearman and Lin’s correlation coefficients for all the replicate combinations for each condition (Replicate 1 versus Replicate 2, Replicate 1 versus Replicate 3 and Replicate 2 versus Replicate 3). This function produces a correlation table and automatically saves correlation graphs with Pearson R squared as a pdf document called “Correlation_plots_fit.pdf”
 
 * **Weighted_average()**: 
-This function averages each gene fitness value across replicates. More specifically, the gene fitness value is the weighted average of gene fitness across replicates. Similarly, for each gene, this function calculates weighted variance for each gene fitness value. 
+This function averages each gene fitness value across replicates. More specifically, the gene fitness value is the inverse-variance weighted average of gene fitness across replicates. Similarly, for each gene, this function calculates the associated standard deviation. 
 
 * **Mean_Correction()**:
 Once average gene fitness has been calculated, each fitness value is corrected by the Mean of the replicates’ means of distribution. 
@@ -121,15 +127,16 @@ This function concludes the calculation of gene fitness values. It centers the f
 
   ### Part III: Comparing gene fitness values between two conditions
 
-Associated script: 2conditions_FitnessComparison.R
+Associated script: Script3_2conditions_FitnessComparison.R
 
 The focus of part III is the comparison of gene fitness values between two conditions. In the script, you determine a reference condition against which all the other conditions are going to be tested. 
 
-The comparison of gene fitness values between two conditions relies on an unpaired two-sample Student test for samples with equal variance. Before running the Student test, we test for equal variance using a Fisher test. If variances are unequal between samples for a given gene, we do not perform the t-test.
+The comparison of gene fitness values between two conditions relies on an unpaired two-sample Student test for samples with equal variance. Before running the two-sided Student test, we test for equal variance using a Fisher test. If variances are unequal between samples for a given gene, we do not perform the t-test.
 
-The Fisher test calculates the ratio of the variance of the gene fitness in both conditions. The greatest variance has to be the numerator. If the ratio is EQUAL or GREATER than the F statistic, then variances are not equal. In the script, the default threshold is set up for alpha=0.025, F(2,2)=39 (degree of freedom is n-1).
+The Fisher test calculates the ratio of the variance of the gene fitness in both conditions. The greatest variance has to be the numerator. If the ratio is EQUAL or GREATER than the F statistic, then variances are not equal. For the Fisher test, you can choose for a significant threshold to be alphaF=0.05 or alphaF=0.002.
 
-In the case of equal variance, a t-statistic is calculated. In the script, you can choose the value of alpha, to screen for significant comparisons. This alpha value is mostly used in the second function of the script (Category_Definition.R) which assigns labels to each gene comparison, whether it is significant (“Sig”), not significant (“Not_Sig”) or not tested (“Not_tested”).
+In the case of equal variance, a t-statistic is calculated. In the script, you can choose to run correction for multiple comparison (parameter multi=1 or 0) and the value of alphaT, to screen for significant comparisons. This alphaT value is mostly used in the second function of the script (Category_Definition.R) which assigns labels to each gene comparison, whether it is significant (“Sig”), not significant (“Not_Sig”) or not tested (“Not_tested”).
+
 
 #### Inputs: 
 
@@ -141,7 +148,9 @@ In the script you have to specify these parameters:
 
 * **Org_locId**: “Num” if the locusId of the genes in your gene.GC file are numerics, “Char” if they are character.
 * **Condition1**: the condition against which you want to test all the other conditions
-* **Alpha**: alpha you want to use for your student test to reject H0.
+* **multi**: option to run correction for multiple comparison testing. 1=run correction for multiple comparison testing and calculated an adjusted-pvalue. The default method is “fdr” but can be changed in the function Comparison_test.R
+* **AlphaF**: alpha you want to use for the Fisher test to reject H0 (H0=variance are equal)
+* **AlphaT**: alpha you want to use for your student test to reject H0 (H0=gene fitness are equal). If multi=1, the screen is performed on the adjusted p-value
 
 #### Outputs:
 
@@ -157,6 +166,68 @@ Performs for each comparison the Fisher test and the Student test. While produci
 
 * **Category_definition()**: 
 This function is called within the Comparison_test() function. Based on the chosen alpha and the t-statistic calculated by the student test, this function assigns a category label to each test. “Sig”: the gene fitness values between the two conditions are significantly different based on your alpha choice; “Not_Sig”: the gene fitness values between the two conditions are not significantly different based on your alpha choice; “Not_tested”: the student test was not performed for that gene because the variances were unequal according to the Fisher test.
+
+
+   ### Example: *E. coli* RB-TnSeq 5 conditions + T0 (Triplicate) from Piercer *et al*., 2020
+   
+Example resources are provided to run the pipeline using the example data from Pierce *et al*., 2020.
+
+In this example, we use triplicates of 5 RB-TnSeq experiments (Condition 1 to 5) sharing the same T0 and performed in triplicate. They correspond to the *E. coli* K12 RB-TnSeq library (Wetmore *et al*., 2015) grown in 5 different conditions.
+
+The pipeline is divided into 3 main scripts. We provide an associated .html file for each script:
+- Script1_ GeneFitness_Replicate_Example.html
+- Script2_Averaging_Replicates_Example.html
+- Script3_2conditions_Fitness_Comparison.html
+
+
+**Script 1** (Script1_GeneFitness_Replicate.Rmd): Calculates gene fitness for of one replicate of a set of RB-TnSeq experiments of the same library and relying on the same T0 sample. 
+Therefore, this script has to be run independently for each replicate of RB-TnSeq experiment using the same T0.
+Here, the file Script1_ GeneFitness_Replicate_Example.html illustrates the run for Replicate 1.
+
+To run that example, you need the following files:
+- gene.GC
+- Ex_Run_R1.csv
+
+We also provide the files Ex_Run_R2.csv and Ex_Run_R3.csv to run that script for replicates 2 and 3 of the example.
+
+
+**Script 2** (Script2_Averaging_Replicates.Rmd): Averages gene fitness values across replicates.
+
+To run this script, you need the output of Script 1 for each replicate of the experiment. 
+Then the script combines all the replicates of the 5 example conditions. 
+
+You should be able to produce the following files from Script 1, that you can then use to run Script 2: 
+- Ex_Run_R1.RData
+- Ex_Run_R2.RData
+- Ex_Run_R3.RData
+
+
+**Script 3** (Script3_2conditions_Fitness_Comparison.Rmd): Performs the gene fitness comparisons between a given reference condition and the other conditions and identifies interaction fitness. 
+
+That Script uses the output of Script2: All_Fitness_Values_Exemple.Rdata
+
+Here, we used a run that compared the final gene fitness of Conditions 2 to 5 to gene fitness of reference condition, Condition 1 
+
+**Provided files to reproduce and compare this example:**
+
+*Initial data for Script1*:
+- Replicate 1: Ex_Run_R1.csv
+- Replicate 2: Ex_Run_R2.csv
+- Replicate 3: Ex_Run_R3.csv
+- gene.GC
+
+*Output Script 1 and Input Script 2*:
+- Replicate 1: Ex_Run_R1.RData
+- Replicate 2: Ex_Run_R2.RData
+- Replicate 3: Ex_Run_R3.RData
+
+*Output Script 2*:
+- All_Fitness_Values_Exemple.Rdata (input Script 3)
+- All_Fitness_Values_Exemple.csv
+
+*Output Script 3*:
+	- Comparison_Ecoli_versusAlone.RData
+	- Comparison_Ecoli_versusAlone.csv
 
 
 
