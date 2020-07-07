@@ -1,0 +1,169 @@
+---
+title: "Script2_Averaging_Replicates"
+author: "Manon Morin"
+date: "6/29/2020"
+output: html_document
+---
+##**STEP 2 :Gene fitness calculation: averaging across replicates**  
+
+## Script: Script2_Averaging_Replicates.Rmd
+       
+That second part of the analysis averages gene fitness across replicates.
+If all studied conditions have the same T0 sample, it requires for each replicate the .RData files generated in the first part of the analysis “Script1_GeneFitness_Replicate.Rmd”. If studied conditions have a different T0 sample, it requires the output of the script Multiple_T0s.R
+Before averaging replicates, we perform a quick analysis of correlation between replicates of the same condition. It produces a final file containing final normalized gene fitness and associated fitness variance across replicates. Plots are generated during data processing to visually follow data transformation.
+
+<br>
+
+### Run
+#### Packages and functions 
+
+```{r, include=TRUE}
+
+rm(list=ls())
+
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(DescTools)
+library(gridExtra)
+
+source("Correlation_Rep.R")
+source("Weighted_average.R")
+```
+<br>
+
+
+#### Data upload and parameters set up
+```{r, include=TRUE}
+# Step1: Parameters set up and Data import
+ # Import .Rdata files generated for each replicate in Script1_GeneFitness_Replicate.Rmd
+ # Isolate and rename All_data_Replicate just after loading to avoid overwritting.
+ # Note: if conditions have different T0s and have been processed independently in "Gene_Fitness_Replicate.R", Step 1 is replaced by running the script: "Multiple_T0s.R"
+
+
+  # Parameter set up
+org_locId=""   # "Num" if numeric , "Char" if characters
+multiT=FALSE  # Switch to TRUE if you used different T0s for a set of conditions and have to run Multiple_T0 to generate the table containing all replicates.
+
+if (multiT==FALSE){
+  load(".Rdata") #load the .Rdata file from Gene_Fitness_Replicate.R for replicate 1
+  Replicate1=All_data_Replicate
+
+  load(".Rdata") #load the .Rdata file from Gene_Fitness_Replicate.R for replicate 2
+  Replicate2=All_data_Replicate
+
+  load(".Rdata") #load the .Rdata file from Gene_Fitness_Replicate.R for replicate 3
+  Replicate3=All_data_Replicate
+
+  # We bind all replicates together and add a column "Rep" to identify were it is coming from
+
+  Replicate1$Rep="R1"
+  Replicate2$Rep="R2"
+  Replicate3$Rep="R3"
+
+  AllReplicate=rbind(Replicate1,Replicate2,Replicate3)
+  head(AllReplicate, n=5)
+}
+
+if (multiT==TRUE){
+  load(".Rdata")    #Generated in Multiple_T0s.R
+  genes.tab <- readr::read_delim("genes.GC.txt", 
+                               "\t", escape_double = FALSE, trim_ws = TRUE)  # import your gene.GC file
+}
+
+```
+<br>
+
+#### Side de by side Replicate visualization
+
+```{r, include=TRUE, echo=TRUE}
+# Step 2: Replicates visualization 
+
+  # Plots for fitness values or variance distribution in each condition and replicate
+plot1_fit=ggplot(AllReplicate, aes(x=NormFitness,col=Cdt))+geom_density(aes(fill=Cdt)) + theme_light()+
+  ggtitle("Distribution of gene fitness values") + facet_grid(Rep ~ Cdt) + labs(x = "Gene fitness value", y="Density")
+
+plot1_var=ggplot(AllReplicate, aes(x=Fitness_Variance,col=Cdt))+geom_density(aes(fill=Cdt)) + theme_light()+
+  ggtitle("Distribution of variance") + facet_grid(Rep ~ Cdt) + labs(x = "Variance associated with fitness values", y="Density")
+
+grid.arrange(plot1_fit, plot1_var, ncol=1)
+
+
+```
+<br>
+
+####Replicates correlation analysis
+
+```{r, include=TRUE, echo=TRUE}
+# Step 3: Replicate correlation calculation and visualization (for gene fitness values)
+  # Determines the correlation between each replicate, stores them in a matrix 
+  # Visualizes correlation in two different ways: (i)  usual correlation plots and (ii) distribution of correlation across all conditions and replicates
+
+  # Calculation of correlation for all pairs of replicate (and each condition) + plots
+Correlation_table_fit=Correlation_Rep(AllReplicate) # Calculates different correlation coefficient + save plots
+
+Correlation_table_fit
+
+plot_allPcor_fit=ggplot(Correlation_table_fit, aes(x=Cond,y=P_Rsquared)) + geom_point(size=2, aes(col=Comp))+
+  theme_light() + labs(y = "Pearson Correlation coefficient", x="Condition") + ylim(0,1) +  ggtitle("Replicate correlation: Pearson coefficient")
+
+plot_allScor_fit=ggplot(Correlation_table_fit, aes(x=Cond,y=P_Rsquared)) + geom_point(size=2, aes(col=Comp))+
+  theme_light() + labs(y = "Spearman Correlation coefficient", x="Condition") + ylim(0,1) + ggtitle("Replicate correlation: Spearman coefficient")
+
+plot_allLcor_fit=ggplot(Correlation_table_fit, aes(x=Cond,y=P_Rsquared)) + geom_point(size=2, aes(col=Comp))+
+  theme_light() + labs(y = "Lin's Correlation coefficient", x="Condition") + ylim(0,1) + ggtitle("Replicate correlation: Lin coefficient")
+
+grid.arrange(plot_allPcor_fit,plot_allScor_fit,plot_allLcor_fit nrow=3)
+
+```
+<br>
+
+#### Averaging replicates
+Gene fitness values are averaged across replicates using the inverse-variance weighted average. Associated squared standard error (var) and associated standard deviations are also calculated.
+<br>
+
+```{r,include=TRUE}
+# Step 4: Weighted average of gene fitness across replicate
+ # Averages gene fitness values across replicates for each condition
+ # Visualizes fitness values distrbutions, squared standard error (var) ditributions and standard deviation distributions
+
+Average_fitness=Weighted_average(AllReplicate, org_locId)
+
+plot2_fit=ggplot(Average_fitness, aes(x=WeightedFit,col=Cdt))+geom_density(aes(fill=Cdt)) + theme_light()+
+  ggtitle("Distribution of average fitness values across replicates") + facet_grid(Cdt ~ .) + labs(x = "Gene fitness values", y="Density")
+
+plot2_var=ggplot(Average_fitness, aes(x=WeightedVar,col=Cdt))+geom_density(aes(fill=Cdt)) + theme_light()+
+  ggtitle("Distribution of squared standard error") + facet_grid(Cdt ~ .) + labs(x = "Squared standard error associated with fitness values", y="Density")
+
+plot2_sd=ggplot(Average_fitness, aes(x=Weightedsdev,col=Cdt))+geom_density(aes(fill=Cdt)) + theme_light()+
+  ggtitle("Distribution of standard deviation") + facet_grid(Cdt ~ .) + labs(x = "Standard deviation associated with fitness values", y="Density")
+
+grid.arrange(plot2_fit,plot2_var,plot2_sd, ncol=1,nrow=3)
+
+```
+<br>
+
+#### Saving data
+
+```{r, include=TRUE}
+
+# Step5: Saving data
+if(org_locId=="Num"){
+  Final_gene_Fitness=left_join(genes.tab,Average_fitness, by=c("locusId")) %>% select(-c(type,strand,GC,nTA))
+  Final_gene_Fitness=na.omit(Final_gene_Fitness)
+}
+
+if(org_locId=="Char"){
+  Average_fitness$locusId=as.character(Average_fitness$locusId)  # the locusId in the Mean table are factors, we need to turn then into charcater for the left_join
+  Final_gene_Fitness=left_join(genes.tab,Average_fitness, by=c("locusId")) %>% select(-c(type,strand,GC,nTA))
+  Final_gene_Fitness$name="No_name"   #replace the NA by something else, otherwise the next NAomit removes everything
+  Final_gene_Fitness=na.omit(Final_gene_Fitness)
+}
+
+write.csv(Final_gene_Fitness,".csv")
+
+save(Final_gene_Fitness, Average_fitness, genes.tab,
+     Correlation_table_fit,AllReplicate, file=".RData")
+
+
+```

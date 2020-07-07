@@ -1,0 +1,97 @@
+---
+title: "Script3_2conditions_FitnessComparison"
+author: "Manon Morin"
+date: "6/29/2020"
+output: html_document
+---
+##**STEP 3: Comparison of fitness values and identification of interaction fitness **
+
+## Script: Script3_2condidtions_FitnessComparison.Rmd
+       
+        
+Compares gene fitness values of all conditions against a chosen reference condition. Appends a “Category” to each compared gene to indicate if fitness values are significantly different or not based on chosen statistical criteria.
+
+<br>
+
+### Run
+#### Packages and functions 
+
+```{r, include=TRUE}
+rm(list=ls())
+
+# Package and functions upload
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+
+source("Category_definition.R")
+source("Comparison_test.R")
+```
+<br>
+
+#### Data upload and parameters set up
+
+```{r, include=TRUE, echo=TRUE}
+
+# Step 1: Data import and parameters settings
+  # Import the .Rdata file generated in Averaging_replicates.R
+  # Set up org_locId
+  # Set up your condition of reference (has to be one of your conditions)
+  # Set up your alpha value for the T-test
+  # Set up whether you want to performed correction for multiple comparison testing and screen on adjusted-pvalue
+
+load(".RData")   # here you upload the .RData ouput of Script2_Averaging_replicates.R
+Data_Fitness=Final_gene_Fitness
+
+org_locId=""  # Again, you set up your organisms whether "Ecoli" if the locusId are in numeric form or "Pseudo" if the locusId are in character form
+Condition1=""  #here you write the name of one of the 2 conditions you want to compare. Make sure it is the same name than previously used
+alphaF=0.002    #here you choose any alpha you want for the Fisher test (Test for equal variance) You can choose 0.05 or 0.002. 
+alphaT=0.05   #here you choose any alpha you want. Just be aware that it is where you can control the amount of false discovery you allow
+multi=1    # here you decide if you want to correct for multiple comparison (method=fdr) multi = 0 ==> no correction; multi=1 correction
+
+
+```
+<br>
+
+#### 2 conditions comparison against a chosen reference condition (Condition 1)
+
+<span style="color:darkslateblue">
+*In the following plots: "Sig" means that gene fitness values are significantly different for that gene between the compared conditions, "Not_Sig" means that fitness values are not significantly different, and "Not_tested" means that the comparison has not been performed for that gene due to unequal variances*
+</span>
+
+```{r,include=TRUE, echo=TRUE}
+
+# Step 2: Run the comparison for all conditions against the reference one
+  # Each conditions that is not the reference is going to be tested against the refence one after the other using a for loop embedding the comparison function
+
+
+Table_all=data.frame() # creates a table to eventually store the data
+List_plots=list(0,0,0,0,0,0,0) # creates a list to store comparison of plots for each comparison in the "for loop" . 
+                               # needs to have as many spots in the list than you have comparisons
+
+Conditions=as.vector(unique(Data_Fitness$Cdt))
+Conditions=Conditions[Conditions!=Condition1]# generates a vector with all the conditions to compare against the reference one
+
+for (i in 1:length(Conditions)){
+  Cdt=Conditions[i]
+  Condition2=paste(Cdt)  
+  Test1=Comparison_test(Data_Fitness,Condition1, Condition2, alphaT, alphaF, org_locId, multi)   
+  #You obtain a list
+  #list[[1]]= the table containing all the genes tested + fitness + variance values in both conditions + Fcalc (Fisher value calculates for the test of variance + Tcalc (Tscore value for the student test))
+  # and the category column indicates if the difference of fitness is significant (Sig), if it is not (Not_Sig) or if the student was not performed because of unequal variances (Not_tested)
+  #list[[2]]=the scatter plot representing the data
+  
+  Table_all=rbind(Table_all, Test1[[1]])
+  List_plots[[i]]= Test1[[2]]
+}
+
+#Visualize all the scatter plots
+grid.arrange(List_plots[[1]],List_plots[[2]],List_plots[[3]],List_plots[[4]], nrow=2,ncol=2)
+
+write.csv(Table_all, ".csv")
+save(Table_all, List_plots, file=".RData")
+
+
+```
