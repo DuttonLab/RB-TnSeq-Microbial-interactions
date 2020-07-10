@@ -179,6 +179,9 @@ The pipeline is divided into 3 main scripts. We provide an associated .html file
 - Script2_Averaging_Replicates_Example.html
 - Script3_2conditions_Fitness_Comparison.html
 
+To open and visualize these .html files, please follow use the solution provided by htmlpreview.github.com:
+	append https://htmlpreview.github.io/? to the URL of the .html file
+
 
 **Script 1** (Script1_GeneFitness_Replicate.Rmd): Calculates gene fitness for of one replicate of a set of RB-TnSeq experiments of the same library and relying on the same T0 sample. 
 Therefore, this script has to be run independently for each replicate of RB-TnSeq experiment using the same T0.
@@ -228,6 +231,8 @@ Here, we used a run that compared the final gene fitness of Conditions 2 to 5 to
 *Output Script 3*:
 	- Comparison_Ecoli_versusAlone.RData
 	- Comparison_Ecoli_versusAlone.csv
+	
+
 
 
 
