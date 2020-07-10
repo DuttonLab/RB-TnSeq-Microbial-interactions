@@ -179,7 +179,7 @@ The pipeline is divided into 3 main scripts. We provide an associated .html file
 - Script2_Averaging_Replicates_Example.html
 - Script3_2conditions_Fitness_Comparison.html
 
-To open and visualize these .html files, please follow use the solution provided by htmlpreview.github.com:
+To open and visualize these .html files, please use the solution provided by htmlpreview.github.com:
 	append https://htmlpreview.github.io/? to the URL of the .html file
 
 
